@@ -24,8 +24,7 @@ body {
     background-color: var(--background-color);
     color: var(--text-color);
     transition: background-color 0.3s, color 0.3s;
-    min-height: 100vh;
-    padding: 25px; /* O padding agora é controlado aqui */
+    min-height: 100vh; /* O padding agora é controlado aqui */
     box-sizing: border-box;
 }
 
