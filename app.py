@@ -137,8 +137,10 @@ def apply_theme_to_ui(theme):
     Output('grafico-origem', 'figure'),
     Output('grafico-seguimento', 'figure'),
     Output('grafico-rd-crm', 'figure'),
+    Output('grafico-delegado', 'figure'),
     Input('filtro-mes', 'value'),
     Input('theme-store', 'data')
+    
 )
 def update_dashboard_data(mes_selecionado, theme):
     try:
@@ -159,7 +161,7 @@ def update_dashboard_data(mes_selecionado, theme):
         # --- Bloco de KPIs com lógica final e consistente ---
         total_leads = len(df)
         qualificados = df[df['Qualificado'].str.strip().str.title() == 'Sim'].shape[0]
-        vendas_fechadas = df[df['Qualificado'].str.strip().str.title() == 'Sim'].shape[0]
+        vendas_fechadas = df[df['Venda fechada?'].str.strip().str.title() == 'Sim'].shape[0]
         clientes_em_negociacao = df[df['Qualificado'].str.strip().str.title() == 'Em Negociação'].shape[0]
         
         try:
@@ -186,11 +188,33 @@ def update_dashboard_data(mes_selecionado, theme):
             fig_crm = px.pie(df_crm, names=coluna_crm, values='count', title=f'CRM vs. Outros - {mes_selecionado}', template=template_visual)
         else:
             fig_crm = go.Figure(layout_title_text=f"Coluna 'CRM' não encontrada").update_layout(template=template_visual)
+            
+        # Adicione este bloco depois da lógica do gráfico de CRM
+
+    # --- LÓGICA PARA O GRÁFICO DE DELEGAÇÃO ---
+        coluna_delegado = find_column_name(df.columns, ['Delegado para'])
+
+        if coluna_delegado:
+            # Filtra dados onde o valor do pedido é maior que zero para um gráfico mais limpo
+            df_delegado = df[(df[coluna_delegado].notna()) & (df[coluna_delegado] != '') & (df['Valor do pedido'] > 0)]
+            fig_delegado = px.strip(
+                df_delegado,
+                x='Valor do pedido',
+                y=coluna_delegado,
+                title=f'Distribuição de Leads Delegados - {mes_selecionado}',
+                labels={'Valor do pedido': 'Valor do Pedido (R$)', coluna_delegado: 'Delegado Para'},
+                template=template_visual,
+                color=coluna_delegado # Colore os pontos por pessoa
+            )
+        else:
+            fig_delegado = go.Figure(layout_title_text=f"Coluna 'Delegado para' não encontrada")
+            fig_delegado.update_layout(template=template_visual)
+        # --- FIM DA LÓGICA ---
+            
+            for fig in [fig_origem, fig_seguimento, fig_crm, fig_delegado]:
+                fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='darkgrey' if theme == 'dark' else '#343a40')
         
-        for fig in [fig_origem, fig_seguimento, fig_crm]:
-            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='darkgrey' if theme == 'dark' else '#343a40')
-        
-        return (total_leads, qualificados, vendas_fechadas, clientes_em_negociacao, faturamento_formatado, fig_origem, fig_seguimento, fig_crm)
+        return (total_leads, qualificados, vendas_fechadas, clientes_em_negociacao, faturamento_formatado, fig_origem, fig_seguimento, fig_crm, fig_delegado)
 
     except Exception as e:
         print("\n" + "="*50)

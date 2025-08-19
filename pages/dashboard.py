@@ -32,6 +32,7 @@ layout = html.Div(id='main-container', children=[
         html.Div(className='card graph-card', children=[dcc.Graph(id='grafico-seguimento', config={'displayModeBar': False})]),
     ]),
     html.Div(className='row', children=[
-         html.Div(className='card graph-card', style={'width': '50%'}, children=[dcc.Graph(id='grafico-rd-crm', config={'displayModeBar': False})]),
-    ])
+        html.Div(className='card graph-card', children=[dcc.Graph(id='grafico-rd-crm')]),
+        html.Div(className='card graph-card', children=[dcc.Graph(id='grafico-delegado')]),
+    ]),
 ])
