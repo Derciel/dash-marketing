@@ -1,4 +1,4 @@
-# app.py - Orquestrador Principal (VERSÃO COM TEMA CORRIGIDO)
+# app.py - Orquestrador Principal (VERSÃO FINAL E CORRIGIDA)
 
 import dash
 from dash import dcc, html, Input, Output, State
@@ -14,8 +14,10 @@ from data_loader import carregar_dados_mes, listar_abas_meses
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
 app.title = "Dashboard de Leads"
 
+# --- CREDENCIAIS (SIMPLES) ---
 VALID_USERNAME_PASSWORD = {'admin': '1234'}
 
+# --- LÓGICA DE NEGÓCIO E AUXILIARES ---
 NOME_DA_PLANILHA = "[3P] Controle de Leads - Nicopel"
 lista_meses = listar_abas_meses(NOME_DA_PLANILHA)
 
@@ -102,7 +104,6 @@ def populate_dropdown(page_layout):
     return [{'label': mes, 'value': mes} for mes in lista_meses], get_mes_vigente()
 
 # --- LÓGICA DE TEMA CORRIGIDA ---
-# Callback 1: Botão de clique atualiza o dcc.Store
 @app.callback(
     Output('theme-store', 'data'),
     Input('theme-toggle-button', 'n_clicks'),
@@ -112,24 +113,19 @@ def populate_dropdown(page_layout):
 def update_theme_store(n_clicks, current_theme):
     return 'dark' if current_theme == 'light' else 'light'
 
-# Callback 2: dcc.Store atualiza a UI (classe do container e ícone do botão)
 @app.callback(
     Output('main-container', 'className'),
     Output('theme-toggle-button', 'children'),
-    Output('logo-img', 'src'), # <-- NOVO OUTPUT
+    Output('logo-img', 'src'),
     Input('theme-store', 'data')
 )
 def apply_theme_to_ui(theme):
     if theme == 'dark':
-        className = 'theme-dark'
-        icon = '🌙'
-        logo_src = '/assets/logo-branca.png'
+        # No tema escuro, mostre o sol para voltar ao claro
+        return 'theme-dark', '☀️', '/assets/logo-branca.png'
     else:
-        className = 'theme-light'
-        icon = '☀️'
-        logo_src = '/assets/logo.png'
-        
-    return className, icon, logo_src
+        # No tema claro, mostre a lua para ir para o escuro
+        return 'theme-light', '🌙', '/assets/logo.png'
 
 # Callback principal de atualização do dashboard
 @app.callback(
@@ -142,31 +138,65 @@ def apply_theme_to_ui(theme):
     Output('grafico-seguimento', 'figure'),
     Output('grafico-rd-crm', 'figure'),
     Input('filtro-mes', 'value'),
-    Input('theme-store', 'data') # Ouve o dcc.Store, não mais a className
+    Input('theme-store', 'data')
 )
 def update_dashboard_data(mes_selecionado, theme):
-    if not mes_selecionado:
-        raise dash.exceptions.PreventUpdate
+    try:
+        if not mes_selecionado:
+            raise dash.exceptions.PreventUpdate
 
-    template_visual = 'plotly_dark' if theme == 'dark' else 'seaborn'
-    
-    # ... (resto da função permanece o mesmo) ...
-    df = carregar_dados_mes(NOME_DA_PLANILHA, mes_selecionado)
-    if df.empty:
-        empty_figure = go.Figure(layout_title_text="Dados não disponíveis para este mês")
-        empty_figure.update_layout(template=template_visual)
-        return 0, 0, 0, 0, "R$ 0,00", empty_figure, empty_figure, empty_figure
+        template_visual = 'plotly_dark' if theme == 'dark' else 'seaborn'
+        df = carregar_dados_mes(NOME_DA_PLANILHA, mes_selecionado)
 
-    df.columns = df.columns.str.strip(); df = limpar_dados(df)
-    total_leads = len(df); qualificados = df[df['Qualificado'].str.strip().str.title().isin(['Sim', 'Em Negociação'])].shape[0]; vendas_fechadas = df[df['Venda fechada?'].str.strip().str.title() == 'Sim'].shape[0]; clientes_em_negociacao = df[df['Venda fechada?'].str.strip().str.title() == 'Em Negociação'].shape[0]; faturamento = df['Valor do pedido'].sum(); faturamento_formatado = f"R$ {faturamento:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    df_origem = df['Onde nos encontrou?'].value_counts().reset_index(); fig_origem = px.pie(df_origem, names='Onde nos encontrou?', values='count', title=f'Origem dos Leads - {mes_selecionado}', template=template_visual)
-    coluna_seguimento = find_column_name(df.columns, ['Seguimento']);
-    if coluna_seguimento:
-        df_seguimento = df[coluna_seguimento].value_counts().reset_index(); fig_seguimento = px.bar(df_seguimento, x=coluna_seguimento, y='count', title=f'Análise por Seguimento - {mes_selecionado}', labels={'count': 'Número de Leads', coluna_seguimento: 'Seguimento'}, template=template_visual)
-    else: fig_seguimento = go.Figure(layout_title_text=f"Coluna 'Seguimento' não encontrada").update_layout(template=template_visual)
-    coluna_crm = find_column_name(df.columns, ['RD CRM', 'CRM']);
-    if coluna_crm:
-        df_crm = df[coluna_crm].value_counts().reset_index(); fig_crm = px.pie(df_crm, names=coluna_crm, values='count', title=f'CRM vs. Outros - {mes_selecionado}', template=template_visual)
-    else: fig_crm = go.Figure(layout_title_text=f"Coluna 'CRM' não encontrada").update_layout(template=template_visual)
-    for fig in [fig_origem, fig_seguimento, fig_crm]: fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='darkgrey' if theme == 'dark' else '#343a40')
-    return (total_leads, qualificados, vendas_fechadas, clientes_em_negociacao, faturamento_formatado, fig_origem, fig_seguimento, fig_crm)
+        if df.empty:
+            empty_figure = go.Figure(layout_title_text="Dados não disponíveis para este mês")
+            empty_figure.update_layout(template=template_visual)
+            return 0, 0, 0, 0, "R$ 0,00", empty_figure, empty_figure, empty_figure
+
+        df.columns = df.columns.str.strip()
+        df = limpar_dados(df)
+
+        # --- Bloco de KPIs com lógica final e consistente ---
+        total_leads = len(df)
+        qualificados = df[df['Qualificado'].str.strip().str.title() == 'Sim'].shape[0]
+        vendas_fechadas = df[df['Qualificado'].str.strip().str.title() == 'Sim'].shape[0]
+        clientes_em_negociacao = df[df['Qualificado'].str.strip().str.title() == 'Em Negociação'].shape[0]
+        
+        try:
+            faturamento = float(df['Valor do pedido'].sum())
+        except (ValueError, TypeError):
+            faturamento = 0.0
+        faturamento_formatado = f"R$ {faturamento:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        
+        # --- Fim do Bloco de KPIs ---
+
+        df_origem = df['Onde nos encontrou?'].value_counts().reset_index()
+        fig_origem = px.pie(df_origem, names='Onde nos encontrou?', values='count', title=f'Origem dos Leads - {mes_selecionado}', template=template_visual)
+        
+        coluna_seguimento = find_column_name(df.columns, ['Seguimento'])
+        if coluna_seguimento:
+            df_seguimento = df[coluna_seguimento].value_counts().reset_index()
+            fig_seguimento = px.bar(df_seguimento, x=coluna_seguimento, y='count', title=f'Análise por Seguimento - {mes_selecionado}', labels={'count': 'Número de Leads', coluna_seguimento: 'Seguimento'}, template=template_visual)
+        else:
+            fig_seguimento = go.Figure(layout_title_text=f"Coluna 'Seguimento' não encontrada").update_layout(template=template_visual)
+        
+        coluna_crm = find_column_name(df.columns, ['RD CRM', 'CRM'])
+        if coluna_crm:
+            df_crm = df[coluna_crm].value_counts().reset_index()
+            fig_crm = px.pie(df_crm, names=coluna_crm, values='count', title=f'CRM vs. Outros - {mes_selecionado}', template=template_visual)
+        else:
+            fig_crm = go.Figure(layout_title_text=f"Coluna 'CRM' não encontrada").update_layout(template=template_visual)
+        
+        for fig in [fig_origem, fig_seguimento, fig_crm]:
+            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='darkgrey' if theme == 'dark' else '#343a40')
+        
+        return (total_leads, qualificados, vendas_fechadas, clientes_em_negociacao, faturamento_formatado, fig_origem, fig_seguimento, fig_crm)
+
+    except Exception as e:
+        print("\n" + "="*50)
+        print(f"Ocorreu um ERRO ao processar o mês: '{mes_selecionado}'")
+        traceback.print_exc()
+        print("="*50 + "\n")
+        
+        empty_figure = go.Figure(layout_title_text=f"Erro ao carregar dados de {mes_selecionado}")
+        return "Erro", "Erro", "Erro", "Erro", "Erro", empty_figure, empty_figure, empty_figure
