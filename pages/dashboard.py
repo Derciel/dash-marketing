@@ -24,7 +24,7 @@ layout = html.Div(id='main-container', children=[
         html.Div(className='card kpi-card', children=["Total de Leads", html.H3(id='kpi-total-leads')]),
         html.Div(className='card kpi-card', children=["Leads Qualificados", html.H3(id='kpi-qualificados')]),
         html.Div(className='card kpi-card', children=["Vendas Fechadas", html.H3(id='kpi-vendas')]),
-        html.Div(className='card kpi-card', children=["Clientes em Negociação", html.H3(id='kpi-clientes-negociacao')]),
+        html.Div(className='card kpi-card', children=["Leads Desqualificados", html.H3(id='kpi-clientes-negociacao')]),
         html.Div(className='card kpi-card', children=["Faturamento Potencial", html.H3(id='kpi-faturamento')]),
     ]),
     html.Div(className='row', children=[

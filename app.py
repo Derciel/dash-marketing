@@ -162,7 +162,7 @@ def update_dashboard_data(mes_selecionado, theme):
         total_leads = len(df)
         qualificados = df[df['Qualificado'].str.strip().str.title() == 'Sim'].shape[0]
         vendas_fechadas = df[df['Venda fechada?'].str.strip().str.title() == 'Sim'].shape[0]
-        clientes_em_negociacao = df[df['Qualificado'].str.strip().str.title() == 'Em Negociação'].shape[0]
+        clientes_em_negociacao = df[df['Qualificado'].str.strip().str.title() == 'Não'].shape[0]
         
         try:
             faturamento = float(df['Valor do pedido'].sum())
